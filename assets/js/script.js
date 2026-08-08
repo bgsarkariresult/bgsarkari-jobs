@@ -1,12 +1,13 @@
 document.addEventListener("DOMContentLoaded", function() {
-    // Detect relative path for JSON (Root or Sub-folder)
-    const jsonPath = window.location.pathname.includes('/jobs/') || 
-                     window.location.pathname.includes('/results/') || 
-                     window.location.pathname.includes('/admit-card/') || 
-                     window.location.pathname.includes('/answer-key/') || 
-                     window.location.pathname.includes('/syllabus/') || 
-                     window.location.pathname.includes('/current-affairs/') 
-                     ? '../data/jobs.json' : 'data/jobs.json';
+    // Detect relative path for JSON (Root vs Sub-folder)
+    const isSubFolder = window.location.pathname.includes('/jobs/') || 
+                        window.location.pathname.includes('/results/') || 
+                        window.location.pathname.includes('/admit-card/') || 
+                        window.location.pathname.includes('/answer-key/') || 
+                        window.location.pathname.includes('/syllabus/') || 
+                        window.location.pathname.includes('/current-affairs/');
+                        
+    const jsonPath = isSubFolder ? '../data/jobs.json' : 'data/jobs.json';
 
     fetch(jsonPath)
         .then(response => response.json())
@@ -25,16 +26,28 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 data.forEach(item => {
                     const li = document.createElement('li');
-                    const pageUrl = item.page_url ? item.page_url : `jobs/${item.slug}.html`;
+                    
+                    // URL Path resolution
+                    let pageUrl = item.page_url;
+                    if (!pageUrl) {
+                        pageUrl = isSubFolder ? `../jobs/${item.slug}.html` : `jobs/${item.slug}.html`;
+                    } else if (isSubFolder && !pageUrl.startsWith('http')) {
+                        pageUrl = `../${pageUrl}`;
+                    }
+
+                    // Clean Category Label
+                    const categoryLabel = item.category ? item.category : 'Govt Job';
+                    const dateDisplay = item.last_date ? `Date: ${item.last_date}` : '';
 
                     li.innerHTML = `
                         <a href="${pageUrl}">
                             <strong>${item.title}</strong>
                         </a>
-                        <span class="badge">${item.category || 'Notification'}</span>
-                        <span class="date">${item.last_date ? 'Date: ' + item.last_date : ''}</span>
+                        <span class="badge">${categoryLabel}</span>
+                        <span class="date">${dateDisplay}</span>
                     `;
 
+                    // Distribution according to category
                     if (item.category === "Admit Card" && admitContainer && admitCount < 10) {
                         admitContainer.appendChild(li);
                         admitCount++;
@@ -47,14 +60,21 @@ document.addEventListener("DOMContentLoaded", function() {
                     }
                 });
 
-                if (resultsCount === 0 && resultsContainer) resultsContainer.innerHTML = '<li><a>No recent result updates</a></li>';
-                if (admitCount === 0 && admitContainer) admitContainer.innerHTML = '<li><a>No recent admit card updates</a></li>';
-                if (jobsCount === 0 && jobsContainer) jobsContainer.innerHTML = '<li><a>No recent job updates</a></li>';
+                // Fallbacks if section is empty
+                if (resultsCount === 0 && resultsContainer) {
+                    resultsContainer.innerHTML = '<li><a>No recent result updates available</a></li>';
+                }
+                if (admitCount === 0 && admitContainer) {
+                    admitContainer.innerHTML = '<li><a>No recent admit card updates available</a></li>';
+                }
+                if (jobsCount === 0 && jobsContainer) {
+                    jobsContainer.innerHTML = '<li><a>No recent job updates available</a></li>';
+                }
             }
 
-            // --- 2. DYNAMIC SUB-PAGES TABLE LOGIC ---
+            // --- 2. SUB-PAGES TABLE LOGIC ---
             const dynamicTableBody = document.getElementById('dynamic-page-table-body');
-            const pageCategory = document.body.getAttribute('data-category'); // Get page type
+            const pageCategory = document.body.getAttribute('data-category');
 
             if (dynamicTableBody && pageCategory) {
                 dynamicTableBody.innerHTML = '';
@@ -63,12 +83,12 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (filteredItems.length > 0) {
                     filteredItems.forEach(item => {
                         const tr = document.createElement('tr');
-                        const pageUrl = item.page_url ? item.page_url : `../jobs/${item.slug}.html`;
+                        let pageUrl = item.page_url ? item.page_url : `../jobs/${item.slug}.html`;
 
                         tr.innerHTML = `
                             <td><b>${item.title}</b></td>
                             <td><span style="color: green; font-weight: bold;">Available</span></td>
-                            <td><a href="${pageUrl}" class="btn btn-apply" style="padding: 5px 10px; font-size: 12px;">View Details</a></td>
+                            <td><a href="${pageUrl}" class="btn btn-apply" style="padding: 5px 10px; font-size: 12px; background:#28a745; color:white; text-decoration:none; border-radius:3px;">View Details</a></td>
                         `;
                         dynamicTableBody.appendChild(tr);
                     });
